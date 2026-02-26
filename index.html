@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>برو-دوك | منصة الوثائق الرسمية</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --accent: #2563eb;
+            --accent-hover: #1d4ed8;
+            --bg-app: #f1f5f9;
+            --panel-bg: #ffffff;
+            --text-main: #1e293b;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        * { box-sizing: border-box; }
+        body { font-family: 'Cairo', sans-serif; background: var(--bg-app); margin: 0; color: var(--text-main); height: 100vh; display: flex; flex-direction: column; }
+
+        /* --- الهيدر --- */
+        header { background: #fff; padding: 10px 25px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .logo { font-weight: 800; color: var(--accent); font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
+
+        /* --- التقسيم الرئيسي --- */
+        main { display: flex; flex: 1; overflow: hidden; }
+
+        /* لوحة التحكم */
+        .controls { width: 450px; background: var(--panel-bg); border-left: 1px solid var(--border-color); display: flex; flex-direction: column; }
+        .scroll-area { flex: 1; overflow-y: auto; padding: 25px; }
+
+        /* لوحة المعاينة */
+        .preview-zone { flex: 1; background: #cbd5e1; padding: 40px; overflow-y: auto; display: flex; justify-content: center; align-items: flex-start; }
+
+        /* --- مكونات الواجهة --- */
+        .card { background: #fff; border: 1px solid var(--border-color); border-radius: 10px; padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow-sm); }
+        .card-title { font-weight: 700; margin-bottom: 15px; display: flex; align-items: center; gap: 8px; color: #475569; }
+        
+        .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .full-width { grid-column: span 2; }
+        
+        label { display: block; font-size: 0.8rem; margin-bottom: 4px; color: #64748b; font-weight: 600; }
+        input, select, textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; font-family: inherit; font-size: 0.9rem; margin-bottom: 10px; }
+        input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+
+        /* نظام الجداول الديناميكي */
+        .signer-item { display: flex; gap: 8px; margin-bottom: 8px; align-items: center; background: #f8fafc; padding: 8px; border-radius: 6px; }
+        .btn-del { color: #ef4444; cursor: pointer; background: none; border: none; }
+
+        /* التوقيع */
+        #sig-canvas { border: 1px dashed #cbd5e1; background: #fff; border-radius: 8px; cursor: crosshair; width: 100%; }
+
+        /* زر التحميل */
+        .actions { padding: 20px; background: #fff; border-top: 1px solid var(--border-color); }
+        .btn-primary { width: 100%; background: var(--accent); color: white; border: none; padding: 14px; border-radius: 8px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 10px; font-size: 1rem; }
+        .btn-primary:hover { background: var(--accent-hover); }
+
+        /* --- تصميم الورقة A4 --- */
+        #paper { width: 210mm; min-height: 297mm; background: white; padding: 25mm; position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.2); transition: 0.3s; }
+        .template-classic { font-family: 'Amiri', serif; }
+        .template-modern { font-family: 'Cairo', sans-serif; border-top: 20px solid var(--accent); }
+
+        .p-header { display: flex; justify-content: space-between; margin-bottom: 40px; }
+        .p-logo { width: 90px; height: 90px; border-radius: 8px; object-fit: contain; }
+        .p-info { text-align: right; line-height: 1.6; }
+        .p-title { text-align: center; font-size: 26px; font-weight: 800; margin: 50px 0; text-decoration: underline; }
+        .p-content { font-size: 1.2rem; line-height: 1.8; text-align: justify; }
+        .p-table { width: 100%; margin-top: 40px; border-collapse: collapse; }
+        .p-table th, .p-table td { border: 1.5px solid #1e293b; padding: 12px; text-align: center; }
+        .p-date { margin-top: auto; padding-top: 60px; font-weight: 600; }
+
+        /* استجابة الهاتف */
+        @media (max-width: 900px) {
+            main { flex-direction: column; overflow-y: auto; }
+            .controls { width: 100%; height: auto; }
+            .preview-zone { padding: 10px; overflow: visible; background: #fff; }
+            #paper { width: 100%; transform: scale(1); padding: 15px; box-shadow: none; border: 1px solid #eee; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo"><i class="fas fa-file-contract"></i> برو-دوك</div>
+        <div style="font-size: 0.8rem; color: #64748b;"><i class="fas fa-circle" style="color:#22c55e"></i> الحفظ السحابي مفعل (Local)</div>
+    </header>
+
+    <main>
+        <div class="controls">
+            <div class="scroll-area">
+                
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-magic"></i> القالب والهوية</div>
+                    <label>اختر نمط الوثيقة</label>
+                    <select id="templateSelector" onchange="app.render()">
+                        <option value="template-classic">قالب رسمي كلاسيكي (Amiri)</option>
+                        <option value="template-modern">قالب عصري حديث (Cairo)</option>
+                    </select>
+                    <label>شعار المؤسسة</label>
+                    <input type="file" accept="image/*" onchange="app.updateLogo(this)">
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-user"></i> البيانات الشخصية</div>
+                    <div class="input-grid">
+                        <div><label>الاسم واللقب</label><input id="inName" oninput="app.render()"></div>
+                        <div><label>رقم الهاتف</label><input id="inPhone" oninput="app.render()"></div>
+                        <div class="full-width"><label>المهنة / الصفة</label><input id="inJob" oninput="app.render()"></div>
+                        <div class="full-width"><label>المؤسسة التعليمية / الإدارية</label><input id="inInst" oninput="app.render()"></div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-pen-nib"></i> محتوى الوثيقة</div>
+                    <label>عنوان الشكوى / المراسلة</label>
+                    <input id="inTitle" value="شكاية رسمية وطلب فتح تحقيق إداري" oninput="app.render()">
+                    <label>موجهة إلى السيد</label>
+                    <input id="inRecipient" placeholder="مثلاً: المدير الجهوي لـ..." oninput="app.render()">
+                    <label>الموضوع</label>
+                    <input id="inSubject" placeholder="خلاصة الطلب في سطر" oninput="app.render()">
+                    <label>نص الرسالة التفصيلي</label>
+                    <textarea id="inBody" rows="6" oninput="app.render()"></textarea>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-users"></i> قائمة الموقعين</div>
+                    <div id="signersUiList"></div>
+                    <div class="signer-row" style="display:flex; gap:5px;">
+                        <input type="text" id="signerIn" placeholder="اسم الموقع...">
+                        <button onclick="app.addSigner()" class="btn-primary" style="width:50px; padding:5px">+</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-title"><i class="fas fa-signature"></i> التوقيع الرقمي</div>
+                    <canvas id="sig-canvas" height="120"></canvas>
+                    <button onclick="app.clearSig()" style="width:100%; background:none; border:none; color:var(--accent); cursor:pointer; font-size:0.8rem; margin-top:5px;">إعادة تعيين التوقيع</button>
+                </div>
+
+            </div>
+
+            <div class="actions">
+                <button class="btn-primary" onclick="app.download()">
+                    <i class="fas fa-file-pdf"></i> تحميل الوثيقة النهائية (PDF)
+                </button>
+            </div>
+        </div>
+
+        <div class="preview-zone">
+            <div id="paper" class="template-classic">
+                <div class="p-header">
+                    <img id="outLogo" src="" style="display:none;" class="p-logo">
+                    <div id="dummyLogo" style="width:80px;height:80px;background:#f1f5f9;border-radius:8px"></div>
+                    <div class="p-info">
+                        <div id="outName" style="font-weight:700; font-size:1.3rem;">طلال بولان</div>
+                        <div id="outJob">الصفة الوظيفية</div>
+                        <div id="outInst">اسم المؤسسة</div>
+                        <div id="outPhone">الهاتف: ........</div>
+                    </div>
+                </div>
+
+                <div class="p-title" id="outTitle">شكاية رسمية</div>
+
+                <div class="p-content">
+                    إلى السيد: <span id="outRecipient" style="font-weight:700">................</span><br>
+                    <strong>الموضوع: <span id="outSubject">................</span></strong>
+                    <p id="outBody" style="white-space: pre-wrap; margin-top:20px;">نص الرسالة سيظهر هنا...</p>
+                </div>
+
+                <table class="p-table">
+                    <thead>
+                        <tr>
+                            <th width="40%">الإمضاء</th>
+                            <th>الاسم واللقب</th>
+                        </tr>
+                    </thead>
+                    <tbody id="outTableBody"></tbody>
+                </table>
+
+                <div class="p-date">
+                    تونس في: <span id="outDate">2026/02/26</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const app = {
+            signers: JSON.parse(localStorage.getItem('pro_doc_signers')) || ["الممضي الأول"],
+            logo: localStorage.getItem('pro_doc_logo') || null,
+            canvas: document.getElementById('sig-canvas'),
+            ctx: null,
+
+            init() {
+                this.ctx = this.canvas.getContext('2d');
+                this.setupSignature();
+                this.loadSavedData();
+                this.render();
+                
+                // تتبع التوقيع للتحديث
+                this.canvas.onmouseup = () => { this.render(); this.saveToLocal(); };
+            },
+
+            setupSignature() {
+                let writing = false;
+                const getPos = (e) => {
+                    const r = this.canvas.getBoundingClientRect();
+                    return [e.clientX - r.left, e.clientY - r.top];
+                };
+                this.canvas.onmousedown = (e) => { writing = true; this.ctx.beginPath(); this.ctx.moveTo(...getPos(e)); };
+                this.canvas.onmousemove = (e) => { if(writing) { this.ctx.lineTo(...getPos(e)); this.ctx.stroke(); } };
+                window.onmouseup = () => writing = false;
+            },
+
+            clearSig() { this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height); this.render(); },
+
+            updateLogo(input) {
+                if (input.files[0]) {
+                    const r = new FileReader();
+                    r.onload = e => { this.logo = e.target.result; this.render(); this.saveToLocal(); };
+                    r.readAsDataURL(input.files[0]);
+                }
+            },
+
+            addSigner() {
+                const inp = document.getElementById('signerIn');
+                if(inp.value) { this.signers.push(inp.value); inp.value = ""; this.render(); this.saveToLocal(); }
+            },
+
+            removeSigner(i) { this.signers.splice(i, 1); this.render(); this.saveToLocal(); },
+
+            render() {
+                // دمج البيانات
+                const fields = ['Name', 'Job', 'Inst', 'Phone', 'Title', 'Recipient', 'Subject', 'Body'];
+                fields.forEach(f => {
+                    const val = document.getElementById('in' + f).value;
+                    document.getElementById('out' + f).innerText = val || '......';
+                });
+
+                // القالب
+                document.getElementById('paper').className = 'paper ' + document.getElementById('templateSelector').value;
+
+                // الشعار
+                const oLogo = document.getElementById('outLogo');
+                const dLogo = document.getElementById('dummyLogo');
+                if(this.logo) { oLogo.src = this.logo; oLogo.style.display = 'block'; dLogo.style.display = 'none'; }
+
+                // الجدول
+                const listUi = document.getElementById('signersUiList');
+                const tableUi = document.getElementById('outTableBody');
+                listUi.innerHTML = tableUi.innerHTML = "";
+
+                this.signers.forEach((s, i) => {
+                    listUi.innerHTML += `<div class="signer-item"><span>${s}</span><button class="btn-del" onclick="app.removeSigner(${i})"><i class="fas fa-trash"></i></button></div>`;
+                    tableUi.innerHTML += `<tr>
+                        <td>${i === 0 ? `<img src="${this.canvas.toDataURL()}" style="max-height:50px">` : '........'}</td>
+                        <td>${s}</td>
+                    </tr>`;
+                });
+
+                document.getElementById('outDate').innerText = new Date().toLocaleDateString('ar-TN');
+            },
+
+            saveToLocal() {
+                localStorage.setItem('pro_doc_signers', JSON.stringify(this.signers));
+                localStorage.setItem('pro_doc_logo', this.logo || "");
+            },
+
+            loadSavedData() {
+                // استرجاع القيم إذا وجدت (إضافة بسيطة لربط الـ inputs)
+                document.getElementById('inName').value = "طلال بولان";
+            },
+
+            download() {
+                const element = document.getElementById('paper');
+                const opt = {
+                    margin: 0,
+                    filename: 'وثيقة_رسمية.pdf',
+                    html2canvas: { scale: 3, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                html2pdf().set(opt).from(element).save();
+            }
+        };
+
+        window.onload = () => app.init();
+    </script>
+</body>
+</html>
